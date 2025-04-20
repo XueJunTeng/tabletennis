@@ -277,34 +277,41 @@
 
     <select id="selectByUsertypeWithPage" resultMap="ContentResultMap">
         SELECT
-        c.content_id,
-        c.title,
-        c.view_count,
-        c.cover_image_url,
-        c.file_path,
-        u.username AS author,
-        c.created_time,
-        c.description,
-        c.user_id,
-        c.type,
-        c.status,
-        c.like_count,
-        c.comment_count,
-        c.favorite_count,
-        c.last_modified_time,
-        c.review_notes
+            c.content_id,
+            c.title,
+            c.view_count,
+            c.cover_image_url,
+            c.file_path,
+            u.username AS author,
+            c.created_time,
+            c.description,
+            c.user_id,
+            c.type,
+            c.status,
+            c.like_count,
+            c.comment_count,
+            c.favorite_count,
+            c.last_modified_time,
+            c.review_notes
         FROM
-        content c
-        LEFT JOIN
-        user u ON c.user_id = u.user_id
-        INNER JOIN
-        user_behavior ub ON c.content_id = ub.content_id
-        WHERE
-        ub.user_id = #{userId}
-        AND ub.behavior_type = #{behaviorType}
-        AND ub.is_active = 1
+            content c
+                LEFT JOIN
+            user u ON c.user_id = u.user_id
+                INNER JOIN (
+                SELECT
+                    content_id,
+                    MAX(created_time) AS latest_created_time
+                FROM
+                    user_behavior
+                WHERE
+                    user_id = #{userId}
+                  AND behavior_type = #{behaviorType}
+                  AND is_active = 1
+                GROUP BY
+                    content_id
+            ) latest_ub ON c.content_id = latest_ub.content_id
         ORDER BY
-        ub.created_time DESC
+            latest_ub.latest_created_time DESC
     </select>
 
     <update id="updateStatusWithNote">

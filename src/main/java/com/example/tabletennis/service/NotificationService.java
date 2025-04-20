@@ -2,12 +2,15 @@ package com.example.tabletennis.service;
 
 import com.example.tabletennis.dto.NotificationDTO;
 import com.example.tabletennis.entity.Comment;
+import com.example.tabletennis.entity.Content;
 import com.example.tabletennis.entity.Notification;
 import com.example.tabletennis.enums.NotificationType;
 import com.example.tabletennis.mapper.CommentMapper;
 import com.example.tabletennis.mapper.ContentMapper;
 import com.example.tabletennis.mapper.NotificationMapper;
 import com.example.tabletennis.mapper.UserMapper;
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import lombok.RequiredArgsConstructor;
 import org.apache.ibatis.annotations.Param;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -26,7 +29,8 @@ public class NotificationService {
     private final CommentMapper commentMapper;
     private final AuthService userService;
 
-    public List<Notification> getNotifications(Long receiverId){
+    public Page<Notification> getNotifications(Long receiverId, Integer page, Integer size){
+        PageHelper.startPage(page, size);
         return notificationMapper.selectNotifications(receiverId);
     }
 
@@ -119,6 +123,17 @@ public class NotificationService {
             case REPLY -> String.format("%s 回复了你的评论", username);
             default -> throw new IllegalStateException("未处理的通知类型: " + type);
         };
+    }
+
+    public void batchMarkAsRead(List<Long> notificationIds) {
+        if (!notificationIds.isEmpty()) {
+            notificationMapper.batchUpdateReadStatus(notificationIds, true);
+        }
+    }
+
+
+    public int countUnreadNotifications(Long userId) {
+        return notificationMapper.countUnreadByUserId(userId);
     }
 
     // 使用显式构造方法加强空安全

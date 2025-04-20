@@ -11,4 +11,8 @@ import java.util.List;
 public interface NotificationMapper {
     int insertNotification(Notification notification);
     Page<Notification> selectNotifications(@Param("receiverId") Long receiverId);
+    void batchUpdateReadStatus(@Param("ids") List<Long> ids,
+                               @Param("isRead") boolean isRead);
+
+    int countUnreadByUserId(@Param("userId") Long userId);
 }

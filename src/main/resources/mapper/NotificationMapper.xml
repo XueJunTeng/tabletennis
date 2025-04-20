@@ -58,6 +58,19 @@
             (#{senderId}, #{receiverId}, #{contentId},#{commentId}, #{type}, #{message}, #{isRead})
     </insert>
 
+    <update id="batchUpdateReadStatus">
+        UPDATE notification
+        SET is_read = #{isRead}
+        WHERE notification_id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
 
-
+    <select id="countUnreadByUserId" resultType="int">
+        SELECT COUNT(*)
+        FROM notification
+        WHERE receiver_id = #{userId}
+          AND is_read = FALSE
+    </select>
 </mapper>
