@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.tabletennis.mapper.FavoriteMapper">
+
+    <!-- 定义 Favorite 的 resultMap -->
+    <resultMap id="FavoriteResultMap" type="com.example.tabletennis.entity.Favorite">
+        <id property="favoriteId" column="favorite_id" />
+        <result property="userId" column="user_id" />
+        <result property="contentId" column="content_id" />
+        <result property="createdTime" column="created_time" />
+    </resultMap>
+
+    <!-- 插入收藏记录 -->
+    <insert id="insertFavorite">
+        INSERT INTO favorite (user_id, content_id, created_time)
+        VALUES (#{userId}, #{contentId}, NOW())
+    </insert>
+
+    <!-- 删除收藏记录 -->
+    <delete id="deleteFavorite">
+        DELETE FROM favorite
+        WHERE user_id = #{userId} AND content_id = #{contentId}
+    </delete>
+
+    <!-- 检查是否存在收藏 -->
+    <select id="existsFavorite" resultType="boolean">
+        SELECT COUNT(*) > 0
+        FROM favorite
+        WHERE user_id = #{userId} AND content_id = #{contentId}
+    </select>
+
+</mapper>

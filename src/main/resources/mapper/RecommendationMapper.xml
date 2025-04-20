@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.tabletennis.mapper.RecommendationMapper">
+
+    <!-- 插入推荐记录 -->
+    <insert id="insert" parameterType="com.example.tabletennis.entity.Recommendation">
+        INSERT INTO recommendation
+            (user_id, content_id, recommend_score, strategy, expire_time)
+        VALUES
+            (#{userId}, #{contentId}, #{recommendScore}, #{strategy}, #{expireTime})
+    </insert>
+
+    <!-- 删除用户推荐缓存 -->
+    <delete id="deleteByUser" parameterType="java.lang.Long">
+        DELETE FROM recommendation WHERE user_id = #{userId}
+    </delete>
+
+    <!-- 查询用户推荐结果 -->
+    <select id="selectByUser" parameterType="java.lang.Long" resultType="com.example.tabletennis.entity.Recommendation">
+        SELECT
+            user_id, content_id, recommend_score, strategy, expire_time, created_time
+        FROM recommendation
+        WHERE user_id = #{userId}
+        ORDER BY recommend_score DESC
+        LIMIT 20
+    </select>
+
+</mapper>

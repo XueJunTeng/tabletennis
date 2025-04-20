@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.tabletennis.mapper.LikeMapper">
+
+    <!-- 定义 Like 的 resultMap -->
+    <resultMap id="LikeResultMap" type="com.example.tabletennis.entity.Like">
+        <id property="likeId" column="like_id" />
+        <result property="userId" column="user_id" />
+        <result property="contentId" column="content_id" />
+        <result property="createdTime" column="created_time" />
+    </resultMap>
+
+    <!-- 插入点赞记录 -->
+    <insert id="insertLike">
+        INSERT INTO `like` (user_id, content_id, created_time)
+        VALUES (#{userId}, #{contentId}, NOW())
+    </insert>
+
+    <!-- 删除点赞记录 -->
+    <delete id="deleteLike">
+        DELETE FROM `like`
+        WHERE user_id = #{userId} AND content_id = #{contentId}
+    </delete>
+
+    <!-- 检查是否存在点赞 -->
+    <select id="existsLike" resultType="boolean">
+        SELECT COUNT(*) > 0
+        FROM `like`
+        WHERE user_id = #{userId} AND content_id = #{contentId}
+    </select>
+
+</mapper>

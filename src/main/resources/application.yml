@@ -1,0 +1,28 @@
+# 应用基础配置
+spring:
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 500MB
+  datasource:
+    url: jdbc:mysql://localhost:3306/table_tennis_db?useUnicode=true&characterEncoding=UTF-8&useSSL=false
+    username: root  # 数据库用户名
+    password: 202124113220  # 数据库密码
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # MyBatis 配置
+mybatis:
+  type-handlers-package: com.example.tabletennis.handler  # 枚举处理器包路径
+  mapper-locations: classpath:mapper/*.xml  # MyBatis XML 映射文件路径
+  configuration:
+    map-underscore-to-camel-case: true      # 自动驼峰命名转换
+
+# JWT 配置
+jwt:
+  secret: alkfhsukadhgiughafdgiagodafjoihgjdfaoijhodadsasaggahgfdahahahshjsgfjsgi       # JWT 签名密钥（至少32位）
+  expiration: 86400000                      # Token 有效期（24小时）
+app:
+  base-url: ${APP_BASE_URL:http://localhost:8080}  # 基础URL带环境变量回退
+  upload:
+    path: /uploads/  # URL路径前缀
+    dir: ${APP_UPLOAD_DIR:D:/uploads/} # 带环境变量回退的存储路径

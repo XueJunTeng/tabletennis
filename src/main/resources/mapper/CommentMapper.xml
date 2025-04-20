@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.tabletennis.mapper.CommentMapper">
+    <resultMap id="commentResultMap" type="com.example.tabletennis.entity.Comment">
+        <id property="commentId" column="comment_id"/>
+        <result property="content" column="content"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="createTime" column="create_time"/>
+        <result property="status" column="status"/>
+        <result property="username" column="username"/>
+    </resultMap>
+    <select id="selectByContentIdWithUsername" resultMap="commentResultMap">
+        SELECT
+            c.comment_id,
+            c.content,
+            c.parent_id,
+            c.user_id,
+            c.create_time,
+            c.status,
+            u.username
+        FROM comment c
+                 JOIN user u ON c.user_id = u.user_id
+        WHERE c.content_id = #{contentId}
+        ORDER BY c.create_time ASC
+    </select>
+    <!-- 插入评论 -->
+    <insert id="insert" parameterType="com.example.tabletennis.entity.Comment"
+            useGeneratedKeys="true" keyProperty="commentId">
+        INSERT INTO comment (
+            content,
+            content_id,
+            user_id,
+            parent_id,
+            create_time,
+            status
+        ) VALUES (
+                     #{content},
+                     #{contentId},
+                     #{userId},
+                     #{parentId},
+                     #{createTime},
+                     #{status}
+                 )
+    </insert>
+    <select id="selectUserIdByCommentId" resultType="java.lang.Long">
+        SELECT user_id FROM comment WHERE comment_id = #{parentId}
+    </select>
+</mapper>

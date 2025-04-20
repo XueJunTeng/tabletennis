@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.tabletennis.mapper.UserInterestMapper">
+
+    <!-- 查询用户兴趣 -->
+    <select id="selectByUserId" parameterType="java.lang.Long" resultType="com.example.tabletennis.entity.UserInterest">
+        SELECT user_id, tag_id, score, last_updated
+        FROM user_interest
+        WHERE user_id = #{userId}
+    </select>
+
+    <!-- 更新或插入兴趣评分 -->
+    <insert id="upsert" parameterType="com.example.tabletennis.entity.UserInterest">
+        INSERT INTO user_interest (user_id, tag_id, score)
+        VALUES (#{userId}, #{tagId}, #{score})
+        ON DUPLICATE KEY UPDATE score = score + VALUES(score)
+    </insert>
+
+</mapper>

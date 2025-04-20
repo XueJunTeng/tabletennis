@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.tabletennis.mapper.TagMapper">
+
+    <!-- 基础字段映射 -->
+    <resultMap id="TagResultMap" type="com.example.tabletennis.entity.Tag">
+        <id property="tagId" column="tag_id"/>
+        <result property="tagName" column="tag_name"/>
+        <result property="usageCount" column="usage_count"/> <!-- 动态计算字段 -->
+    </resultMap>
+
+    <!-- 模糊查询标签 -->
+    <select id="selectTags" resultMap="TagResultMap">
+        SELECT * FROM tag
+        WHERE tag_name LIKE CONCAT('%', #{search}, '%')
+        LIMIT #{pageSize}
+    </select>
+
+    <!-- 插入标签 -->
+    <insert id="insertTag" parameterType="com.example.tabletennis.entity.Tag"
+            useGeneratedKeys="true" keyProperty="tagId" keyColumn="tag_id">
+        INSERT INTO tag (tag_name)
+        VALUES (#{tagName})
+    </insert>
+
+    <!-- 统计存在的标签数量 -->
+    <select id="filterExistingTagIds" resultType="int">
+        SELECT tag_id FROM tag
+        WHERE tag_id IN
+        <foreach item="id" collection="tagIds" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+    <!-- 根据标签ID查询标签 -->
+    <select id="selectById" resultType="com.example.tabletennis.entity.Tag">
+        SELECT tag_id, tag_name, usage_count, weight
+        FROM tag
+        WHERE tag_id = #{tagId}
+    </select>
+
+    <select id="selectByKeyword" resultMap="TagResultMap">
+        SELECT * FROM tag
+        <if test="keyword != null and keyword != ''">
+            WHERE tag_name LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="tagId">
+        INSERT INTO tag (tag_name)
+        VALUES (#{tagName})
+    </insert>
+
+    <delete id="deleteById">
+        DELETE FROM tag WHERE tag_id = #{tagId}
+    </delete>
+
+    <delete id="deleteBatchIds">
+        DELETE FROM tag WHERE tag_id IN
+        <foreach collection="tagIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+</mapper>

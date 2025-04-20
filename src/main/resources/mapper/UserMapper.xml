@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.tabletennis.mapper.UserMapper">
+
+    <resultMap id="UserResultMap" type="com.example.tabletennis.entity.User">
+        <id property="userId" column="user_id"/>
+        <result property="username" column="username"/>
+        <result property="password" column="password"/>
+        <result property="email" column="email"/>
+        <result property="registrationTime" column="registration_time"/>
+        <result property="lastLoginTime" column="last_login_time"/>
+        <result property="role" column="role"/>
+        <result property="status" column="status"/>
+        <result property="avatarUrl" column="avatar_url"/>
+    </resultMap>
+
+    <!-- 基础查询条件 -->
+    <sql id="baseCondition">
+        <where>
+            <if test="search != null">
+                AND (username LIKE #{search} OR email LIKE #{search})
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+            <if test="role != null">
+                AND role = #{role}
+            </if>
+        </where>
+    </sql>
+
+    <!-- 动态排序 -->
+    <sql id="baseOrder">
+        ORDER BY
+        <choose>
+            <when test="sortField == 'username'">username</when>
+            <when test="sortField == 'email'">email</when>
+            <when test="sortField == 'last_login_time'">last_login_time</when>
+            <otherwise>registration_time</otherwise>
+        </choose>
+        <choose>
+            <when test="sortOrder == 'ASC'">ASC</when>
+            <otherwise>DESC</otherwise>
+        </choose>
+    </sql>
+
+    <!-- 分页查询 -->
+    <select id="selectUsersByCondition" resultMap="UserResultMap">
+        SELECT
+        user_id, username, email, role, status,
+        avatar_url, registration_time, last_login_time
+        FROM user
+        <include refid="baseCondition"/>
+        <include refid="baseOrder"/>
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <!-- 总数统计 -->
+    <select id="countUsersByCondition" resultType="int">
+        SELECT COUNT(*)
+        FROM user
+        <include refid="baseCondition"/>
+    </select>
+
+    <!-- 基础CRUD操作 -->
+    <insert id="insertUser" useGeneratedKeys="true" keyProperty="userId">
+        INSERT INTO user (
+            username, password, email, role, status,
+            avatar_url, registration_time
+        )
+        VALUES (
+                   #{username}, #{password}, #{email},
+                   COALESCE(#{role}, 'user'),
+                   COALESCE(#{status}, 'active'),
+                   #{avatarUrl},
+                   COALESCE(#{registrationTime}, NOW())
+               )
+    </insert>
+
+    <select id="selectByEmail" resultMap="UserResultMap">
+        SELECT * FROM user WHERE email = #{email}
+    </select>
+
+    <select id="selectByUsername" resultMap="UserResultMap">
+        SELECT * FROM user WHERE username = #{username}
+    </select>
+    <select id="selectById" resultMap="UserResultMap">
+        SELECT * FROM user WHERE user_id = #{userId}
+    </select>
+
+
+    <update id="updateLastLoginTime">
+        UPDATE user
+        SET last_login_time = #{lastLoginTime}
+        WHERE user_id = #{userId}
+    </update>
+
+    <!-- 管理操作 -->
+    <update id="updateUserStatus">
+        UPDATE user
+        SET status = #{status}
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="updateUserRole">
+        UPDATE user
+        SET role = #{role}
+        WHERE user_id = #{userId}
+    </update>
+
+    <!-- 批量操作 -->
+    <update id="batchUpdateStatus">
+        UPDATE user
+        SET status = #{status}
+        WHERE user_id IN
+        <foreach item="id" collection="userIds" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
+    <delete id="batchDeleteUsers">
+        DELETE FROM user
+        WHERE user_id IN
+        <foreach item="id" collection="userIds" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <update id="batchUpdateRoles">
+        UPDATE user
+        SET role = #{role}
+        WHERE user_id IN
+        <foreach item="id" collection="userIds" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
+    <!-- 其他原有操作 -->
+    <select id="selectAllActiveUsers" resultMap="UserResultMap">
+        SELECT *
+        FROM user
+        WHERE status = 'active'
+    </select>
+
+    <select id="selectUserIdByUsername" resultType="java.lang.Long">
+        SELECT user_id
+        FROM user
+        WHERE username = #{username}
+    </select>
+
+    <select id="selectIdByUsername" resultType="java.lang.Long">
+        SELECT user_id
+        FROM user
+        WHERE username = #{username}
+    </select>
+
+    <select id="selectUsernameById" resultType="string">
+        SELECT username
+        FROM user
+        WHERE user_id = #{userId}
+    </select>
+    <select id="existsById" resultType="boolean">
+        SELECT COUNT(*) > 0
+        FROM user
+        WHERE user_id = #{userId}
+    </select>
+    <update id="updateUserName">
+        UPDATE user
+        SET username = #{username}
+        WHERE user_id = #{userId}
+    </update>
+    <update id="updateEmail">
+        UPDATE user
+        SET email = #{email}
+        WHERE user_id = #{userId}
+    </update>
+    <!-- 根据用户ID查询加密密码 -->
+    <select id="selectPasswordByUserId" resultType="java.lang.String">
+        SELECT password
+        FROM user
+        WHERE user_id = #{userId}
+    </select>
+    <!-- 更新密码（带加密） -->
+    <update id="updatePassword">
+        UPDATE user
+        SET password = #{newEncodedPassword}
+        WHERE user_id = #{userId}
+    </update>
+    <update id="updateAvatarUrl">
+        UPDATE user
+        SET avatar_url = #{avatarUrl}
+        WHERE user_id = #{userId}
+    </update>
+</mapper>

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.tabletennis.mapper.UserBehaviorMapper">
+
+    <!-- 定义 UserBehavior 的 resultMap -->
+    <resultMap id="UserBehaviorResultMap" type="com.example.tabletennis.entity.UserBehavior">
+        <id property="logId" column="log_id" />
+        <result property="userId" column="user_id" />
+        <result property="contentId" column="content_id" />
+        <result property="behaviorType" column="behavior_type" />
+        <result property="isActive" column="is_active" />
+        <result property="createdTime" column="created_time" />
+        <result property="updatedTime" column="updated_time" />
+    </resultMap>
+
+    <!-- 插入用户行为记录 -->
+    <insert id="insertBehavior" parameterType="com.example.tabletennis.entity.UserBehavior">
+        INSERT INTO user_behavior
+            (user_id, content_id, behavior_type, is_active, created_time)
+        VALUES
+            (#{userId}, #{contentId}, #{behaviorType}, #{isActive}, NOW())
+    </insert>
+
+    <!-- 更新行为状态 -->
+    <update id="updateBehaviorStatus">
+        UPDATE user_behavior
+        SET
+            is_active = #{isActive},
+            updated_time = NOW()
+        WHERE
+            user_id = #{userId}
+          AND content_id = #{contentId}
+          AND behavior_type = #{behaviorType}
+    </update>
+    <select id="selectByUser" resultType="com.example.tabletennis.entity.UserBehavior">
+        SELECT * FROM user_behavior
+        WHERE user_id = #{userId} AND is_active = 1
+    </select>
+
+    <select id="selectAll" resultType="com.example.tabletennis.entity.UserBehavior">
+        SELECT * FROM user_behavior WHERE is_active = 1
+    </select>
+</mapper>

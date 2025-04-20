@@ -1,0 +1,385 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.tabletennis.mapper.ContentMapper">
+
+    <resultMap id="TagResultMap" type="com.example.tabletennis.entity.Tag">
+        <id property="tagId" column="tag_id"/>
+        <result property="tagName" column="tag_name"/>
+        <result property="usageCount" column="usage_count"/>
+    </resultMap>
+
+    <resultMap id="UserBehaviorResultMap" type="com.example.tabletennis.entity.UserBehavior">
+        <id property="logId" column="log_id"/>
+        <result property="behaviorType" column="behavior_type"/>
+        <result property="isActive" column="is_active"/>
+        <result property="createdTime" column="created_time"/>
+        <result property="updatedTime" column="updated_time"/>
+    </resultMap>
+
+    <resultMap id="ContentResultMap" type="com.example.tabletennis.entity.Content">
+        <id property="contentId" column="content_id"/>
+        <result property="title" column="title"/>
+        <result property="viewCount" column="view_count"/>
+        <result property="coverImageUrl" column="cover_image_url"/>
+        <result property="filePath" column="file_path"/>
+        <result property="author" column="author"/>
+        <result property="createdTime" column="created_time"/>
+        <result property="description" column="description"/>
+        <result property="userId" column="user_id"/>
+        <result property="type" column="type"/>
+        <result property="status" column="status"/>
+        <result property="likeCount" column="like_count"/>
+        <result property="commentCount" column="comment_count"/>
+        <result property="favoriteCount" column="favorite_count"/>
+        <result property="lastModifiedTime" column="last_modified_time"/>
+        <result property="reviewNotes" column="review_notes"/>
+
+        <collection
+                property="tags"
+                ofType="com.example.tabletennis.entity.Tag"
+                resultMap="TagResultMap"
+                columnPrefix="tag_"/>
+    </resultMap>
+
+    <!-- 新增模糊查询方法 -->
+    <select id="selectByTitle" resultMap="ContentResultMap">
+        SELECT
+            c.content_id,
+            c.title,
+            c.view_count,
+            c.cover_image_url,
+            c.file_path,
+            u.username AS author,
+            c.created_time,
+            c.description,
+            c.user_id,
+            c.type,
+            c.status,
+            c.like_count,
+            c.comment_count,
+            c.favorite_count,
+            c.last_modified_time,
+            c.review_notes,
+            t.tag_id AS tag_tag_id,
+            t.tag_name AS tag_tag_name,
+            t.usage_count AS tag_usage_count
+        FROM content c
+                 LEFT JOIN user u ON c.user_id = u.user_id
+                 LEFT JOIN content_tag ct ON c.content_id = ct.content_id
+                 LEFT JOIN tag t ON ct.tag_id = t.tag_id
+        WHERE c.title LIKE CONCAT('%', #{title}, '%')
+        ORDER BY c.created_time DESC
+    </select>
+
+    <select id="selectApprovedVideos" resultMap="ContentResultMap">
+        SELECT
+            c.content_id,
+            c.title,
+            c.view_count,
+            c.cover_image_url,
+            c.file_path,
+            u.username AS author,
+            c.created_time,
+            c.description,
+            c.user_id,
+            c.type,
+            c.status,
+            c.like_count,
+            c.comment_count,
+            c.favorite_count,
+            c.last_modified_time,
+            c.review_notes,
+            -- 添加标签字段（与selectContentById一致）
+            t.tag_id AS tag_tag_id,
+            t.tag_name AS tag_tag_name,
+            t.usage_count AS tag_usage_count
+        FROM content c
+                 LEFT JOIN user u ON c.user_id = u.user_id
+            -- 新增LEFT JOIN以获取标签信息
+                 LEFT JOIN content_tag ct ON c.content_id = ct.content_id
+                 LEFT JOIN tag t ON ct.tag_id = t.tag_id
+        WHERE c.type = 'VIDEO' AND c.status = 'APPROVED'
+        ORDER BY c.created_time DESC
+    </select>
+
+    <select id="selectApprovedArticles" resultMap="ContentResultMap">
+        SELECT
+            c.content_id,
+            c.title,
+            c.view_count,
+            c.cover_image_url,
+            c.file_path,
+            u.username AS author,
+            c.created_time,
+            c.description,
+            c.user_id,
+            c.type,
+            c.status,
+            c.like_count,
+            c.comment_count,
+            c.favorite_count,
+            c.last_modified_time,
+            c.review_notes,
+            -- 添加标签字段（与selectContentById一致）
+            t.tag_id AS tag_tag_id,
+            t.tag_name AS tag_tag_name,
+            t.usage_count AS tag_usage_count
+        FROM content c
+                 LEFT JOIN user u ON c.user_id = u.user_id
+            -- 新增LEFT JOIN以获取标签信息
+                 LEFT JOIN content_tag ct ON c.content_id = ct.content_id
+                 LEFT JOIN tag t ON ct.tag_id = t.tag_id
+        WHERE c.type = 'ARTICLE' AND c.status = 'APPROVED'
+        ORDER BY c.created_time DESC
+    </select>
+
+    <select id="selectContentById" resultMap="ContentResultMap">
+        SELECT
+            c.content_id,
+            c.title,
+            c.view_count,
+            c.cover_image_url,
+            c.file_path,
+            u.username AS author,
+            c.created_time,
+            c.description,
+            c.user_id,
+            c.type,
+            c.status,
+            c.like_count,
+            c.comment_count,
+            c.favorite_count,
+            c.last_modified_time,
+            c.review_notes,
+            -- 标签字段（添加别名前缀 tag_）
+            t.tag_id AS tag_tag_id,
+            t.tag_name AS tag_tag_name,
+            t.usage_count AS tag_usage_count
+        FROM content c
+                 LEFT JOIN user u ON c.user_id = u.user_id
+                 LEFT JOIN content_tag ct ON c.content_id = ct.content_id
+                 LEFT JOIN tag t ON ct.tag_id = t.tag_id
+        WHERE c.content_id = #{contentId}
+    </select>
+
+    <insert id="insertContent" parameterType="com.example.tabletennis.entity.Content"
+            useGeneratedKeys="true" keyProperty="contentId">
+        INSERT INTO content (
+            title,
+            description,
+            user_id,
+            type,
+            status,
+            cover_image_url,
+            file_path,
+            created_time
+        ) VALUES (
+                     #{title},
+                     #{description},
+                     #{userId},
+                     #{type},
+                     #{status},
+                     #{coverImageUrl},
+                     #{filePath},
+                     #{createdTime}
+                 )
+    </insert>
+
+    <!-- 增加点赞数 -->
+    <update id="incrementLikeCount">
+        UPDATE content
+        SET like_count = like_count + 1
+        WHERE content_id = #{contentId}
+    </update>
+
+    <!-- 减少点赞数 -->
+    <update id="decrementLikeCount">
+        UPDATE content
+        SET like_count = like_count - 1
+        WHERE content_id = #{contentId}
+    </update>
+
+    <!-- 查询点赞数 -->
+    <select id="getLikeCountByContentId" resultType="int">
+        SELECT like_count
+        FROM content
+        WHERE content_id = #{contentId}
+    </select>
+
+    <update id="incrementFavoriteCount">
+        UPDATE content
+        SET favorite_count = favorite_count + 1
+        WHERE content_id = #{contentId}
+    </update>
+
+    <update id="decrementFavoriteCount">
+        UPDATE content
+        SET favorite_count = favorite_count - 1
+        WHERE content_id = #{contentId}
+    </update>
+
+    <select id="getFavoriteCount" resultType="int">
+        SELECT favorite_count
+        FROM content
+        WHERE content_id = #{contentId}
+    </select>
+
+    <update id="incrementViewCount">
+        UPDATE content
+        SET view_count = view_count + 1
+        WHERE content_id = #{contentId}
+    </update>
+
+    <select id="getViewCount" resultType="int">
+        SELECT view_count
+        FROM content
+        WHERE content_id = #{contentId}
+    </select>
+
+    <!-- 查询已审核内容 -->
+    <select id="selectApprovedContents" resultType="com.example.tabletennis.entity.Content">
+        SELECT *
+        FROM content
+        WHERE status = 'approved'
+    </select>
+
+    <select id="selectByStatusWithPage" resultMap="ContentResultMap">
+        SELECT
+            c.content_id,
+            c.title,
+            c.view_count,
+            c.cover_image_url,
+            c.file_path,
+            u.username AS author,
+            c.created_time,
+            c.description,
+            c.user_id,
+            c.type,
+            c.status,
+            c.like_count,
+            c.comment_count,
+            c.favorite_count,
+            c.last_modified_time,
+            c.review_notes,
+            -- 添加标签字段（与selectContentById一致）
+            t.tag_id AS tag_tag_id,
+            t.tag_name AS tag_tag_name,
+            t.usage_count AS tag_usage_count
+        FROM content c
+                 LEFT JOIN user u ON c.user_id = u.user_id
+            -- 新增LEFT JOIN以获取标签信息
+                 LEFT JOIN content_tag ct ON c.content_id = ct.content_id
+                 LEFT JOIN tag t ON ct.tag_id = t.tag_id
+
+        WHERE  c.status = #{status}
+        ORDER BY c.created_time DESC
+    </select>
+
+    <select id="selectByUsertypeWithPage" resultMap="ContentResultMap">
+        SELECT
+        c.content_id,
+        c.title,
+        c.view_count,
+        c.cover_image_url,
+        c.file_path,
+        u.username AS author,
+        c.created_time,
+        c.description,
+        c.user_id,
+        c.type,
+        c.status,
+        c.like_count,
+        c.comment_count,
+        c.favorite_count,
+        c.last_modified_time,
+        c.review_notes
+        FROM
+        content c
+        LEFT JOIN
+        user u ON c.user_id = u.user_id
+        INNER JOIN
+        user_behavior ub ON c.content_id = ub.content_id
+        WHERE
+        ub.user_id = #{userId}
+        AND ub.behavior_type = #{behaviorType}
+        AND ub.is_active = 1
+        ORDER BY
+        ub.created_time DESC
+    </select>
+
+    <update id="updateStatusWithNote">
+        UPDATE content SET
+                           status = #{status},
+                           review_notes = #{reviewNotes},
+                           last_modified_time = NOW()
+        WHERE content_id = #{contentId}
+    </update>
+
+    <select id="selectById" resultMap="ContentResultMap">
+        SELECT * FROM content
+        WHERE content_id = #{contentId}
+    </select>
+
+    <select id="selectUserIdByContentId" resultMap="ContentResultMap">
+        SELECT user_id
+        FROM content
+        WHERE content_id = #{contentId}
+    </select>
+    <select id="selectAuthorIdByContentId" resultType="java.lang.Long">
+        SELECT user_id FROM content WHERE content_id = #{contentId}
+    </select>
+    <!-- 批量查询元数据 -->
+    <select id="selectBatchIds" resultMap="ContentResultMap">
+        SELECT
+        c.content_id,
+        c.title,
+        c.cover_image_url,
+        c.view_count,
+        c.created_time,
+        c.type,
+        c.favorite_count,
+        c.like_count,
+        c.comment_count,
+        u.username AS author,
+        c.description,
+        t.tag_id AS tag_tag_id,
+        t.tag_name AS tag_tag_name,
+        t.usage_count AS tag_usage_count
+        FROM content c
+        LEFT JOIN user u ON c.user_id = u.user_id
+        LEFT JOIN content_tag ct ON c.content_id = ct.content_id
+        LEFT JOIN tag t ON ct.tag_id = t.tag_id
+        WHERE c.content_id IN
+        <foreach item="id" collection="contentIds" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <select id="selectBatchIdsByType" resultMap="ContentResultMap">
+        SELECT
+        c.content_id,
+        c.title,
+        c.cover_image_url,
+        c.view_count,
+        c.created_time,
+        c.type,
+        c.favorite_count,
+        c.like_count,
+        c.comment_count,
+        u.username AS author,
+        c.description,
+        t.tag_id AS tag_tag_id,
+        t.tag_name AS tag_tag_name,
+        t.usage_count AS tag_usage_count
+        FROM content c
+        LEFT JOIN user u ON c.user_id = u.user_id
+        LEFT JOIN content_tag ct ON c.content_id = ct.content_id
+        LEFT JOIN tag t ON ct.tag_id = t.tag_id
+        WHERE c.content_id IN
+        <foreach item="id" collection="contentIds" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND c.type = #{type}
+    </select>
+
+</mapper>
