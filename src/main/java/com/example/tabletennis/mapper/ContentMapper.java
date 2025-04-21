@@ -67,4 +67,8 @@ public interface ContentMapper {
     List<Content> selectByTitle(@Param("title") String title);
     // 添加批量查询方法
     List<Content> selectBatchIds(@Param("contentIds") List<Integer> contentIds);
+    List<Content> selectPendingContents(
+            @Param("keyword") String keyword,
+            @Param("type") String type
+    );
 }

@@ -58,4 +58,6 @@ public interface ContentService {
     List<Content> getApprovedArticles();
 
     List<Content> getSearchContents(String query);
+
+    List<Content> getPendingContents(int page, int size, String keyword, String type);
 }

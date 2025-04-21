@@ -23,9 +23,15 @@ public class ContentAdminController {
     @GetMapping("/pending")
     public ResponseEntity<PageInfo<Content>> getPendingContents(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String keyword,  // 新增搜索关键词
+            @RequestParam(required = false) String type) {  // 新增内容类型过滤
         return ResponseEntity.ok(
-                new PageInfo<>(contentService.getContentsByStatus("pending", page, size)));
+                new PageInfo<>(contentService.getPendingContents(
+                        page,
+                        size,
+                        keyword,
+                        type)));
     }
 
     @PostMapping("/{contentId}/review")

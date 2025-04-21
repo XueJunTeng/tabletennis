@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -47,6 +48,24 @@ public class ContentServiceImpl implements ContentService {
     @Override
     public List<Content> getSearchContents(String query){
         return contentMapper.selectByTitle(query);
+    }
+    @Override
+    public List<Content> getPendingContents(int page, int size, String keyword, String type) {
+        PageHelper.startPage(page, size);
+        return contentMapper.selectPendingContents(
+                processSearchKeyword(keyword),
+                validateContentType(type)
+        );
+    }
+
+    private String processSearchKeyword(String keyword) {
+        return StringUtils.isBlank(keyword) ? null : keyword.trim();
+    }
+
+    private String validateContentType(String type) {
+        if (StringUtils.isBlank(type)) return null;
+        return Arrays.asList("VIDEO", "ARTICLE")
+                .contains(type.toUpperCase()) ? type.toUpperCase() : null;
     }
     public List<Content> getApprovedVideos() {
         return contentMapper.selectApprovedVideos();

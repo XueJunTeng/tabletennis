@@ -34,14 +34,28 @@
         <result property="lastModifiedTime" column="last_modified_time"/>
         <result property="reviewNotes" column="review_notes"/>
 
+        <!-- 修改为嵌套查询解决重复问题 -->
         <collection
                 property="tags"
                 ofType="com.example.tabletennis.entity.Tag"
-                resultMap="TagResultMap"
-                columnPrefix="tag_"/>
+                select="selectTagsByContentId"
+                column="content_id"/>
     </resultMap>
 
-    <!-- 新增模糊查询方法 -->
+    <!-- 新增标签查询 -->
+    <select id="selectTagsByContentId" resultMap="TagResultMap">
+        SELECT
+            t.tag_id,
+            t.tag_name,
+            t.usage_count
+        FROM
+            content_tag ct
+                JOIN tag t ON ct.tag_id = t.tag_id
+        WHERE
+            ct.content_id = #{contentId}
+    </select>
+
+    <!-- 所有涉及标签的查询均移除JOIN操作 -->
     <select id="selectByTitle" resultMap="ContentResultMap">
         SELECT
             c.content_id,
@@ -59,14 +73,9 @@
             c.comment_count,
             c.favorite_count,
             c.last_modified_time,
-            c.review_notes,
-            t.tag_id AS tag_tag_id,
-            t.tag_name AS tag_tag_name,
-            t.usage_count AS tag_usage_count
+            c.review_notes
         FROM content c
                  LEFT JOIN user u ON c.user_id = u.user_id
-                 LEFT JOIN content_tag ct ON c.content_id = ct.content_id
-                 LEFT JOIN tag t ON ct.tag_id = t.tag_id
         WHERE c.title LIKE CONCAT('%', #{title}, '%')
         ORDER BY c.created_time DESC
     </select>
@@ -88,16 +97,9 @@
             c.comment_count,
             c.favorite_count,
             c.last_modified_time,
-            c.review_notes,
-            -- 添加标签字段（与selectContentById一致）
-            t.tag_id AS tag_tag_id,
-            t.tag_name AS tag_tag_name,
-            t.usage_count AS tag_usage_count
+            c.review_notes
         FROM content c
                  LEFT JOIN user u ON c.user_id = u.user_id
-            -- 新增LEFT JOIN以获取标签信息
-                 LEFT JOIN content_tag ct ON c.content_id = ct.content_id
-                 LEFT JOIN tag t ON ct.tag_id = t.tag_id
         WHERE c.type = 'VIDEO' AND c.status = 'APPROVED'
         ORDER BY c.created_time DESC
     </select>
@@ -119,16 +121,9 @@
             c.comment_count,
             c.favorite_count,
             c.last_modified_time,
-            c.review_notes,
-            -- 添加标签字段（与selectContentById一致）
-            t.tag_id AS tag_tag_id,
-            t.tag_name AS tag_tag_name,
-            t.usage_count AS tag_usage_count
+            c.review_notes
         FROM content c
                  LEFT JOIN user u ON c.user_id = u.user_id
-            -- 新增LEFT JOIN以获取标签信息
-                 LEFT JOIN content_tag ct ON c.content_id = ct.content_id
-                 LEFT JOIN tag t ON ct.tag_id = t.tag_id
         WHERE c.type = 'ARTICLE' AND c.status = 'APPROVED'
         ORDER BY c.created_time DESC
     </select>
@@ -150,18 +145,70 @@
             c.comment_count,
             c.favorite_count,
             c.last_modified_time,
-            c.review_notes,
-            -- 标签字段（添加别名前缀 tag_）
-            t.tag_id AS tag_tag_id,
-            t.tag_name AS tag_tag_name,
-            t.usage_count AS tag_usage_count
+            c.review_notes
         FROM content c
                  LEFT JOIN user u ON c.user_id = u.user_id
-                 LEFT JOIN content_tag ct ON c.content_id = ct.content_id
-                 LEFT JOIN tag t ON ct.tag_id = t.tag_id
         WHERE c.content_id = #{contentId}
     </select>
 
+    <!-- 分页查询status时移除标签JOIN -->
+    <select id="selectByStatusWithPage" resultMap="ContentResultMap">
+        SELECT
+            c.content_id,
+            c.title,
+            c.view_count,
+            c.cover_image_url,
+            c.file_path,
+            u.username AS author,
+            c.created_time,
+            c.description,
+            c.user_id,
+            c.type,
+            c.status,
+            c.like_count,
+            c.comment_count,
+            c.favorite_count,
+            c.last_modified_time,
+            c.review_notes
+        FROM content c
+                 LEFT JOIN user u ON c.user_id = u.user_id
+        WHERE  c.status = #{status}
+        ORDER BY c.created_time DESC
+    </select>
+
+    <!-- 待审内容查询优化 -->
+    <select id="selectPendingContents" resultMap="ContentResultMap">
+        SELECT
+        c.content_id,
+        c.title,
+        c.view_count,
+        c.cover_image_url,
+        c.file_path,
+        u.username AS author,
+        c.created_time,
+        c.description,
+        c.user_id,
+        c.type,
+        c.status,
+        c.like_count,
+        c.comment_count,
+        c.favorite_count,
+        c.last_modified_time,
+        c.review_notes
+        FROM content c
+        LEFT JOIN user u ON c.user_id = u.user_id
+        WHERE c.status = 'PENDING'
+        <if test="keyword != null and keyword != ''">
+            AND (c.title LIKE CONCAT('%', #{keyword}, '%')
+            OR u.username LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="type != null and type != ''">
+            AND c.type = #{type}
+        </if>
+        ORDER BY c.created_time DESC
+    </select>
+
+    <!-- 其他保持原有不变 -->
     <insert id="insertContent" parameterType="com.example.tabletennis.entity.Content"
             useGeneratedKeys="true" keyProperty="contentId">
         INSERT INTO content (
@@ -185,21 +232,18 @@
                  )
     </insert>
 
-    <!-- 增加点赞数 -->
     <update id="incrementLikeCount">
         UPDATE content
         SET like_count = like_count + 1
         WHERE content_id = #{contentId}
     </update>
 
-    <!-- 减少点赞数 -->
     <update id="decrementLikeCount">
         UPDATE content
         SET like_count = like_count - 1
         WHERE content_id = #{contentId}
     </update>
 
-    <!-- 查询点赞数 -->
     <select id="getLikeCountByContentId" resultType="int">
         SELECT like_count
         FROM content
@@ -236,43 +280,10 @@
         WHERE content_id = #{contentId}
     </select>
 
-    <!-- 查询已审核内容 -->
     <select id="selectApprovedContents" resultType="com.example.tabletennis.entity.Content">
         SELECT *
         FROM content
         WHERE status = 'approved'
-    </select>
-
-    <select id="selectByStatusWithPage" resultMap="ContentResultMap">
-        SELECT
-            c.content_id,
-            c.title,
-            c.view_count,
-            c.cover_image_url,
-            c.file_path,
-            u.username AS author,
-            c.created_time,
-            c.description,
-            c.user_id,
-            c.type,
-            c.status,
-            c.like_count,
-            c.comment_count,
-            c.favorite_count,
-            c.last_modified_time,
-            c.review_notes,
-            -- 添加标签字段（与selectContentById一致）
-            t.tag_id AS tag_tag_id,
-            t.tag_name AS tag_tag_name,
-            t.usage_count AS tag_usage_count
-        FROM content c
-                 LEFT JOIN user u ON c.user_id = u.user_id
-            -- 新增LEFT JOIN以获取标签信息
-                 LEFT JOIN content_tag ct ON c.content_id = ct.content_id
-                 LEFT JOIN tag t ON ct.tag_id = t.tag_id
-
-        WHERE  c.status = #{status}
-        ORDER BY c.created_time DESC
     </select>
 
     <select id="selectByUsertypeWithPage" resultMap="ContentResultMap">
@@ -335,7 +346,7 @@
     <select id="selectAuthorIdByContentId" resultType="java.lang.Long">
         SELECT user_id FROM content WHERE content_id = #{contentId}
     </select>
-    <!-- 批量查询元数据 -->
+
     <select id="selectBatchIds" resultMap="ContentResultMap">
         SELECT
         c.content_id,
@@ -348,14 +359,9 @@
         c.like_count,
         c.comment_count,
         u.username AS author,
-        c.description,
-        t.tag_id AS tag_tag_id,
-        t.tag_name AS tag_tag_name,
-        t.usage_count AS tag_usage_count
+        c.description
         FROM content c
         LEFT JOIN user u ON c.user_id = u.user_id
-        LEFT JOIN content_tag ct ON c.content_id = ct.content_id
-        LEFT JOIN tag t ON ct.tag_id = t.tag_id
         WHERE c.content_id IN
         <foreach item="id" collection="contentIds" open="(" separator="," close=")">
             #{id}
@@ -374,14 +380,9 @@
         c.like_count,
         c.comment_count,
         u.username AS author,
-        c.description,
-        t.tag_id AS tag_tag_id,
-        t.tag_name AS tag_tag_name,
-        t.usage_count AS tag_usage_count
+        c.description
         FROM content c
         LEFT JOIN user u ON c.user_id = u.user_id
-        LEFT JOIN content_tag ct ON c.content_id = ct.content_id
-        LEFT JOIN tag t ON ct.tag_id = t.tag_id
         WHERE c.content_id IN
         <foreach item="id" collection="contentIds" open="(" separator="," close=")">
             #{id}

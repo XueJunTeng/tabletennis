@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.tabletennis.mapper.DashboardMapper">
+
+    <!-- 总览统计 -->
+    <select id="selectDashboardStats" resultType="com.example.tabletennis.dto.DashboardStatsDTO">
+        SELECT
+        (SELECT COUNT(*) FROM user) AS totalUsers,
+        (SELECT COUNT(*) FROM user
+        WHERE DATE(registration_time) = CURDATE()) AS todayNewUsers,
+        (SELECT COUNT(*) FROM content
+        WHERE status = 'PENDING') AS pendingContents
+    </select>
+
+    <!-- 用户增长趋势 -->
+    <select id="selectUserGrowthTrend" resultType="com.example.tabletennis.dto.UserGrowthDTO">
+        SELECT
+        DATE(registration_time) AS date,
+        COUNT(*) AS count
+        FROM user
+        WHERE registration_time BETWEEN #{start} AND #{end}
+        GROUP BY DATE(registration_time)
+        ORDER BY date ASC
+    </select>
+
+    <!-- 内容类型分布 -->
+    <select id="selectContentTypeDistribution" resultType="com.example.tabletennis.dto.ContentTypeDTO">
+        SELECT
+        type AS contentType,
+        COUNT(*) AS count
+        FROM content
+        WHERE status = 'APPROVED'
+        GROUP BY type
+    </select>
+
+</mapper>
