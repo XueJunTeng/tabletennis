@@ -15,6 +15,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,12 +33,13 @@ public class NotificationController {
     public ResponseEntity<PageInfo<Notification>> getNotifications(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) List<String> types, // 添加类型过滤参数
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         Long userId = authService.getUserIdByUsername(userDetails.getUsername());
-
-        return ResponseEntity.ok(
-                new PageInfo<>(notificationService.getNotifications(userId,page,size)));
+        return ResponseEntity.ok(notificationService.getNotifications(
+                userId, page, size, types
+        ));
     }
     @PostMapping("/batch-read")
     public ResponseEntity<ApiResponse> batchMarkAsRead(
@@ -48,15 +50,16 @@ public class NotificationController {
     }
 
     // 新增的未读数接口
-    @GetMapping("/unread-count")
+    @GetMapping("/unread-counts")
     public ResponseEntity<ApiResponse> getUnreadCount(
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         Long userId = authService.getUserIdByUsername(userDetails.getUsername());
-        int count = notificationService.countUnreadNotifications(userId);
-        return ResponseEntity.ok(
-                ApiResponse.success("获取成功", Map.of("count", count))
-        );
+        Map<String, Integer> counts = new HashMap<>();
+        counts.put("replyComment", notificationService.countUnreadReplyComment(userId));
+        counts.put("like", notificationService.countUnreadLike(userId));
+
+        return ResponseEntity.ok(ApiResponse.success("Success", counts));
     }
 
 

@@ -26,7 +26,7 @@
         <result property="commentContent" column="comment_content"/>
     </resultMap>
 
-    <!-- 查询语句 -->
+    <!-- 主查询 -->
     <select id="selectNotifications" resultMap="notificationResultMap">
         SELECT
         n.notification_id,
@@ -40,15 +40,34 @@
         n.created_time,
         u.avatar_url AS sender_avatar_url,
         u.username AS sender_username,
-        co.title AS content_title,      -- 直接通过 content_id 获取内容标题
+        co.title AS content_title,
         co.type AS content_type,
-        c.content AS comment_content    -- 通过 comment_id 获取评论内容
+        c.content AS comment_content
         FROM notification n
         LEFT JOIN user u ON n.sender_id = u.user_id
-        LEFT JOIN content co ON n.content_id = co.content_id  -- 直接关联内容表
-        LEFT JOIN comment c ON n.comment_id = c.comment_id    -- 关联评论表
+        LEFT JOIN content co ON n.content_id = co.content_id
+        LEFT JOIN comment c ON n.comment_id = c.comment_id
         WHERE n.receiver_id = #{receiverId}
+        <if test="types != null and types.size() > 0">
+            AND n.type IN
+            <foreach item="type" collection="types" open="(" separator="," close=")">
+                #{type}
+            </foreach>
+        </if>
         ORDER BY n.created_time DESC
+    </select>
+
+    <!-- 优化COUNT查询 -->
+    <select id="selectNotifications_COUNT" resultType="long">
+        SELECT COUNT(1)
+        FROM notification n
+        WHERE n.receiver_id = #{receiverId}
+        <if test="types != null and types.size() > 0">
+            AND n.type IN
+            <foreach item="type" collection="types" open="(" separator="," close=")">
+                #{type}
+            </foreach>
+        </if>
     </select>
 
     <insert id="insertNotification" parameterType="com.example.tabletennis.entity.Notification" useGeneratedKeys="true" keyProperty="notificationId">
@@ -72,5 +91,17 @@
         FROM notification
         WHERE receiver_id = #{userId}
           AND is_read = FALSE
+    </select>
+
+    <select id="countUnreadByTypes" resultType="int">
+        SELECT COUNT(*)
+        FROM notification
+        WHERE receiver_id = #{userId}
+        AND is_read = 0
+        AND type IN
+        <foreach item="type" collection="types"
+                 open="(" separator="," close=")">
+            #{type}
+        </foreach>
     </select>
 </mapper>
