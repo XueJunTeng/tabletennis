@@ -22,6 +22,7 @@
         <!-- 关联内容表的字段 -->
         <result property="contentTitle" column="content_title"/>
         <result property="contentType" column="content_type"/>
+        <result property="contentStatus" column="content_status"/>
         <!-- 关联评论表的字段 -->
         <result property="commentContent" column="comment_content"/>
     </resultMap>
@@ -42,6 +43,7 @@
         u.username AS sender_username,
         co.title AS content_title,
         co.type AS content_type,
+        co.status AS content_status,
         c.content AS comment_content
         FROM notification n
         LEFT JOIN user u ON n.sender_id = u.user_id

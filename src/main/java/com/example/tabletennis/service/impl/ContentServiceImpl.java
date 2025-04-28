@@ -9,12 +9,10 @@ import com.example.tabletennis.entity.UserBehavior;
 import com.example.tabletennis.enums.ContentStatus;
 import com.example.tabletennis.enums.ContentType;
 import com.example.tabletennis.exception.FileStorageException;
-import com.example.tabletennis.mapper.ContentMapper;
-import com.example.tabletennis.mapper.ContentTagMapper;
-import com.example.tabletennis.mapper.TagMapper;
-import com.example.tabletennis.mapper.UserBehaviorMapper;
+import com.example.tabletennis.mapper.*;
 import com.example.tabletennis.service.ContentService;
 import com.example.tabletennis.service.FileStorageService;
+import com.example.tabletennis.service.NotificationService;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +42,7 @@ public class ContentServiceImpl implements ContentService {
     private final ContentTagMapper contentTagMapper;
     private final FileStorageService fileStorageService;
     private final UserBehaviorMapper userBehaviorMapper;
+    private final NotificationService notificationService;
 
     @Override
     public List<Content> getSearchContents(String query){
@@ -275,7 +274,7 @@ public class ContentServiceImpl implements ContentService {
 
     // 修改后的审核方法
     @Transactional
-    public void reviewContent(Integer contentId, String status, String reviewNotes) {
+    public void reviewContent(Integer contentId,Long userId, String status, String reviewNotes) {
         // 参数校验
         if (ContentStatus.REJECTED.name().equalsIgnoreCase(status)
                 && StringUtils.isBlank(reviewNotes)) {
@@ -291,12 +290,13 @@ public class ContentServiceImpl implements ContentService {
                 contentId, status);
 
         // 预留通知接口
-        sendNotification(content, status, reviewNotes);
+        sendNotification(content, userId,status, reviewNotes);
     }
 
-    private void sendNotification(Content content, String status, String notes) {
-        // 空实现，仅记录日志
-        log.debug("通知功能待实现 - 内容ID: {}", content.getContentId());
+    private void sendNotification(Content content,Long userId, String status, String notes) {
+
+        notificationService.createReviewNotification(content,userId,status,notes);
+
     }
     public Long getContentUserId(Integer contentId){
         return contentMapper.selectUserIdByContentId(contentId);

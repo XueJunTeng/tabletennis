@@ -1,19 +1,19 @@
 package com.example.tabletennis.service;
 
-import com.example.tabletennis.dto.NotificationDTO;
 import com.example.tabletennis.entity.Comment;
 import com.example.tabletennis.entity.Content;
 import com.example.tabletennis.entity.Notification;
+import com.example.tabletennis.enums.ContentStatus;
 import com.example.tabletennis.enums.NotificationType;
 import com.example.tabletennis.mapper.CommentMapper;
 import com.example.tabletennis.mapper.ContentMapper;
 import com.example.tabletennis.mapper.NotificationMapper;
 import com.example.tabletennis.mapper.UserMapper;
-import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import lombok.RequiredArgsConstructor;
-import org.apache.ibatis.annotations.Param;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +23,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import static com.example.tabletennis.enums.ContentStatus.APPROVED;
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
@@ -168,6 +170,51 @@ public class NotificationService {
 
     public int countUnreadLike(Long userId) {
         return notificationMapper.countUnreadByTypes(userId, Collections.singletonList("LIKE"));
+    }
+    public int countUnreadSystem(Long userId) {
+        return notificationMapper.countUnreadByTypes(userId, Collections.singletonList("SYSTEM"));
+    }
+
+    public void createReviewNotification(Content content, Long userId, String status, String notes){
+
+        // 参数校验
+        if (content == null) {
+            throw new IllegalArgumentException("Content cannot be null");
+        }
+
+        // 转换为枚举确保类型安全
+        ContentStatus contentStatus = ContentStatus.valueOf(status.toUpperCase());
+
+        // 构建系统消息
+        String message = buildSystemMessage(contentStatus, notes);
+
+        Notification notification = new Notification();
+        notification.setReceiverId(content.getUserId());
+        notification.setContentId(content.getContentId());
+        notification.setType(NotificationType.SYSTEM);
+        notification.setMessage(message);
+        notification.setIsRead(false);
+        notification.setCreatedTime(LocalDateTime.now());
+
+        // 设置系统发送者（需要提前定义系统用户ID）
+        notification.setSenderId(userId);
+
+        try {
+            notificationMapper.insertNotification(notification);
+        } catch (Exception e) {
+            log.error("系统通知创建失败 - 内容ID: {}, 错误: {}", content.getContentId(), e.getMessage());
+            // 可根据需要添加重试逻辑或降级处理
+        }
+
+
+    }
+    private String buildSystemMessage(ContentStatus status, String notes) {
+        String base = "上传内容已";
+        return switch (status) {
+            case APPROVED -> base + "通过";
+            case REJECTED -> base + "驳回，驳回原因：" + StringUtils.defaultIfEmpty(notes, "未提供具体原因");
+            default -> throw new IllegalArgumentException("不支持的通知状态: " + status);
+        };
     }
 }
 

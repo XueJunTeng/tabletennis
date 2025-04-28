@@ -4,6 +4,8 @@ import com.example.tabletennis.entity.UserBehavior;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 
 @Mapper
@@ -25,4 +27,9 @@ public interface UserBehaviorMapper {
     List<UserBehavior> selectByType(@Param("type") String type);
     List<UserBehavior> selectByUser(Long userId);
     List<UserBehavior> selectAll();
+
+    List<UserBehavior> selectContentsByBehavior(
+            @Param("userId") Long userId,
+            @Param("behaviorType") String behaviorType,
+            @Param("cutoff") LocalDateTime cutoff);
 }

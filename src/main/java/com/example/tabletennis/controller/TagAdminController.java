@@ -30,10 +30,21 @@ public class TagAdminController {
     }
 
     @PostMapping
-    public ResponseEntity<Tag> createTag(@RequestBody Map<String, String> request) {
-        Tag createdTag = tagService.createTag(request.get("tagName"));
+    public ResponseEntity<Tag> createTag(@RequestBody Map<String, Object> request) {
+        String tagName = (String) request.get("tagName");
+        Integer weight = (Integer) request.get("weight");
+        Tag createdTag = tagService.createTag(tagName, weight);
         return ResponseEntity.created(URI.create("/api/admin/tags/" + createdTag.getTagId()))
                 .body(createdTag);
+    }
+
+    @PutMapping("/{tagId}/weight")
+    public ResponseEntity<Tag> updateTagWeight(
+            @PathVariable Integer tagId,
+            @RequestBody Map<String, Integer> request) {
+        Integer newWeight = request.get("weight");
+        Tag updatedTag = tagService.updateTagWeight(tagId, newWeight);
+        return ResponseEntity.ok(updatedTag);
     }
 
     @DeleteMapping("/{tagId}")
@@ -47,4 +58,6 @@ public class TagAdminController {
         tagService.batchDeleteTags(request.get("tagIds"));
         return ResponseEntity.noContent().build();
     }
+
+
 }

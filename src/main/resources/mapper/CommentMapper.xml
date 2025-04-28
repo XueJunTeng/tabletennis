@@ -9,6 +9,7 @@
         <result property="createTime" column="create_time"/>
         <result property="status" column="status"/>
         <result property="username" column="username"/>
+        <result property="avatarUrl" column="avatarUrl"/>
     </resultMap>
     <select id="selectByContentIdWithUsername" resultMap="commentResultMap">
         SELECT
@@ -18,7 +19,8 @@
             c.user_id,
             c.create_time,
             c.status,
-            u.username
+            u.username,
+            u.avatar_url AS avatarUrl <!-- 新增字段 -->
         FROM comment c
                  JOIN user u ON c.user_id = u.user_id
         WHERE c.content_id = #{contentId}

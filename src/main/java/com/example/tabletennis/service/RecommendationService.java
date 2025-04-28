@@ -6,9 +6,7 @@ import com.example.tabletennis.mapper.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
+
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -24,8 +22,6 @@ public class RecommendationService {
     // 数据访问层接口依赖注入
     private final UserInterestMapper userInterestMapper;    // 用户兴趣数据访问
     private final ContentMapper contentMapper;              // 内容数据访问
-    private final ContentTagMapper contentTagMapper;        // 内容标签关系数据访问
-    private final TagMapper tagMapper;                      // 标签数据访问
     private final UserBehaviorMapper userBehaviorMapper;   // 用户行为数据访问
     private final RecommendationMapper recommendationMapper; // 推荐结果数据访问
     private final UserMapper userMapper;                    // 用户数据访问
@@ -54,17 +50,35 @@ public class RecommendationService {
             contentScores.put(content.getContentId(), similarity);
         }
 
-        // 4. 生成推荐结果并排序
-        return contentScores.entrySet().stream()
-                .sorted(Map.Entry.<Integer, Float>comparingByValue().reversed()) // 按得分降序排序
-                .limit(limit) // 限制结果数量
+        // 4. 生成推荐结果并排序（添加日志输出）
+        List<Recommendation> recommendations = contentScores.entrySet().stream()
+                // 添加中间操作打印日志
+                .peek(entry -> System.out.printf(
+                        "[内容推荐] 内容ID：%-5d | 相似度得分：%.3f | 用户ID：%d%n",
+                        entry.getKey(), entry.getValue(), userId
+                ))
+                .sorted(Map.Entry.<Integer, Float>comparingByValue().reversed())
+                .limit(limit)
                 .map(entry -> new Recommendation(
                         userId,
                         entry.getKey(),
                         entry.getValue(),
-                        "content" // 推荐策略标记
+                        "content"
                 ))
                 .collect(Collectors.toList());
+
+        // 添加最终结果汇总输出
+        System.out.println("\n=== 基于内容的推荐结果汇总 ===");
+        System.out.printf("用户ID：%d | 生成推荐数量：%d/%d%n",
+                userId, recommendations.size(), limit);
+        System.out.println("--------------------------------");
+        recommendations.forEach(rec -> System.out.printf(
+                "内容ID：%-5d | 最终得分：%.3f | 策略：%-7s%n",
+                rec.getContentId(), rec.getRecommendScore(), rec.getStrategy()
+        ));
+        System.out.println("================================");
+
+        return recommendations;
     }
 
     /**
@@ -76,65 +90,144 @@ public class RecommendationService {
     public List<Recommendation> generateCollaborativeRecommendations(Long userId, int limit) {
         // 1. 获取目标用户行为记录
         List<UserBehavior> targetBehaviors = userBehaviorMapper.selectByUser(userId);
-
-        // 2. 计算相似用户（基于共同行为物品的Jaccard相似度）
-        Map<Long, Float> similarUsers = new HashMap<>();
-        List<UserBehavior> allBehaviors = userBehaviorMapper.selectAll();
-
-        for (UserBehavior behavior : allBehaviors) {
-            if (behavior.getUserId().equals(userId)) continue; // 跳过目标用户自身
-
-            // 获取两个用户的行为内容集合
-            Set<Integer> targetItems = targetBehaviors.stream()
-                    .map(UserBehavior::getContentId)
-                    .collect(Collectors.toSet());
-            Set<Integer> otherItems = allBehaviors.stream()
-                    .filter(b -> b.getUserId().equals(behavior.getUserId()))
-                    .map(UserBehavior::getContentId)
-                    .collect(Collectors.toSet());
-
-            // 计算Jaccard相似度：交集大小 / 并集大小
-            Set<Integer> intersection = new HashSet<>(targetItems);
-            intersection.retainAll(otherItems);
-            float similarity = (float) intersection.size() /
-                    (targetItems.size() + otherItems.size() - intersection.size());
-
-            similarUsers.merge(behavior.getUserId(), similarity, Float::sum);
-        }
-
-        // 3. 获取相似度最高的前10个用户
-        List<Long> topSimilarUsers = similarUsers.entrySet().stream()
-                .sorted(Map.Entry.<Long, Float>comparingByValue().reversed())
-                .limit(10)
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
-
-        // 4. 收集相似用户的行为内容（排除目标用户已接触的内容）
         Set<Integer> targetContentIds = targetBehaviors.stream()
                 .map(UserBehavior::getContentId)
                 .collect(Collectors.toSet());
-        Map<Integer, Integer> contentScores = new HashMap<>();
 
-        for (Long similarUserId : topSimilarUsers) {
-            userBehaviorMapper.selectByUser(similarUserId).forEach(behavior -> {
-                if (!targetContentIds.contains(behavior.getContentId())) {
-                    // 合并内容推荐得分（出现次数累计）
-                    contentScores.merge(behavior.getContentId(), 1, Integer::sum);
+        // 2. 计算相似用户（Jaccard相似度）
+        Map<Long, Float> similarUsers = new HashMap<>();
+        List<UserBehavior> allBehaviors = userBehaviorMapper.selectAll();
+
+        System.out.println("\n=== Jaccard相似度计算明细 ===");
+        System.out.println("目标用户ID: " + userId);
+        System.out.println("目标用户行为内容: " + targetContentIds);
+        System.out.println("-----------------------------------------------");
+        System.out.println("其他用户ID | 交集大小 | 并集大小 | 相似度 | 用户行为内容");
+
+        allBehaviors.stream()
+                .filter(b -> !b.getUserId().equals(userId))
+                .collect(Collectors.groupingBy(UserBehavior::getUserId))
+                .forEach((otherUserId, behaviors) -> {
+                    // 获取其他用户的行为内容集合
+                    Set<Integer> otherItems = behaviors.stream()
+                            .map(UserBehavior::getContentId)
+                            .collect(Collectors.toSet());
+
+                    // 计算交集和并集
+                    Set<Integer> intersection = new HashSet<>(targetContentIds);
+                    intersection.retainAll(otherItems);
+                    int unionSize = targetContentIds.size() + otherItems.size() - intersection.size();
+
+                    // 计算相似度（处理除零情况）
+                    float similarity = unionSize == 0 ? 0 :
+                            (float) intersection.size() / unionSize;
+
+                    // 记录调试信息
+                    System.out.printf("%-10d | %-8d | %-8d | %-6.2f | %s%n",
+                            otherUserId,
+                            intersection.size(),
+                            unionSize,
+                            similarity,
+                            otherItems);
+
+                    similarUsers.put(otherUserId, similarity);
+                });
+
+        // 添加空行分隔
+        System.out.println("\n=== 相似度计算结果 ===");
+        similarUsers.forEach((otherUserId, similarity) ->
+                System.out.printf("用户 %d 的相似度: %.2f%n", otherUserId, similarity));
+
+
+        // 3. 获取Top10相似用户（过滤零相似）
+        List<Long> topSimilarUsers = similarUsers.entrySet().stream()
+                .filter(entry -> entry.getValue() > 0) // 过滤相似度<=0的用户
+                .sorted(Map.Entry.<Long, Float>comparingByValue().reversed())
+                .limit(10)
+                .map(Map.Entry::getKey)
+                .toList();
+
+        // 4. 收集相似用户行为（使用相似度加权）
+        Map<Integer, Float> weightedScores = new HashMap<>();
+        topSimilarUsers.forEach(similarUserId -> {
+            // 获取该相似用户的相似度值
+            float similarity = similarUsers.get(similarUserId);
+
+            // 获取用户交互内容的唯一集合
+            Set<Integer> userContents = userBehaviorMapper.selectByUser(similarUserId)
+                    .stream()
+                    .map(UserBehavior::getContentId)
+                    .collect(Collectors.toSet());
+
+            // 遍历唯一内容ID，用相似度加权
+            userContents.forEach(contentId -> {
+                if (!targetContentIds.contains(contentId)) {
+                    weightedScores.merge(
+                            contentId,
+                            similarity,  // 使用相似度值作为权重
+                            Float::sum
+                    );
                 }
             });
-        }
 
-        // 5. 生成推荐结果并排序
-        return contentScores.entrySet().stream()
-                .sorted(Map.Entry.<Integer, Integer>comparingByValue().reversed())
+            // 调试日志：显示每个相似用户的贡献
+            System.out.printf("[加权处理] 相似用户%-5d | 相似度:%.2f | 推荐内容: %s%n",
+                    similarUserId, similarity, userContents);
+        });
+
+        // 5. 得分标准化处理（基于最大相似度）
+        Map<Integer, Float> normalizedScores = normalizeWeightedScores(weightedScores);
+
+        // 6. 生成推荐结果（带诊断日志）
+        List<Recommendation> recommendations = normalizedScores.entrySet().stream()
+                .peek(entry -> {
+                    Float rawScore = weightedScores.get(entry.getKey());
+                    float normalized = entry.getValue();
+                    System.out.printf("[协同过滤诊断] 内容%-6d | 原始次数:%-3f | 归一化:%.2f | 用户%-4d%n",
+                            entry.getKey(), rawScore, normalized, userId);
+                })
+                .sorted(Map.Entry.<Integer, Float>comparingByValue().reversed())
                 .limit(limit)
                 .map(entry -> new Recommendation(
                         userId,
                         entry.getKey(),
-                        entry.getValue().floatValue(),
-                        "collab" // 推荐策略标记
+                        entry.getValue(), // 使用归一化后的得分
+                        "collab"
                 ))
                 .collect(Collectors.toList());
+
+        // 7. 结果汇总输出
+        System.out.println("\n=== 协同过滤推荐结果 ===");
+        System.out.printf("用户ID:%-5d | 有效推荐:%-2d/%-2d | 相似用户数:%-2d%n",
+                userId, recommendations.size(), limit, topSimilarUsers.size());
+        System.out.println("内容ID  归一化得分  原始次数");
+        recommendations.forEach(rec ->
+                System.out.printf("%-7d %-10.2f %-5f%n",
+                        rec.getContentId(),
+                        rec.getRecommendScore(),
+                        weightedScores.get(rec.getContentId()))
+        );
+        System.out.println("=======================");
+
+        return recommendations;
+    }
+
+
+    /**
+     * 归一化加权得分（将得分缩放到0-1范围）
+     */
+    private Map<Integer, Float> normalizeWeightedScores(Map<Integer, Float> weightedScores) {
+        if (weightedScores.isEmpty()) return Collections.emptyMap();
+
+        // 获取最大得分（防止除零）
+        float max = Collections.max(weightedScores.values());
+        if (max == 0) return weightedScores; // 所有得分都是0
+
+        return weightedScores.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue() / max
+                ));
     }
 
     /**

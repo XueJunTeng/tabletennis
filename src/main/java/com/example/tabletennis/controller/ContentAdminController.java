@@ -2,11 +2,14 @@ package com.example.tabletennis.controller;
 
 import com.example.tabletennis.dto.ReviewRequest;
 import com.example.tabletennis.entity.Content;
+import com.example.tabletennis.service.AuthService;
 import com.example.tabletennis.service.ContentService;
 import com.github.pagehelper.PageInfo;
 import lombok.Data;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 
@@ -15,9 +18,11 @@ import org.springframework.web.bind.annotation.*;
 @PreAuthorize("hasRole('ADMIN')")
 public class ContentAdminController {
     private final ContentService contentService;
+    private final AuthService userService;
 
-    public ContentAdminController(ContentService contentService) {
+    public ContentAdminController(ContentService contentService, AuthService userService) {
         this.contentService = contentService;
+        this.userService = userService;
     }
 
     @GetMapping("/pending")
@@ -37,9 +42,11 @@ public class ContentAdminController {
     @PostMapping("/{contentId}/review")
     public ResponseEntity<Void> reviewContent(
             @PathVariable Integer contentId,
-            @RequestBody ReviewRequest request) {
-
-        contentService.reviewContent(contentId,
+            @RequestBody ReviewRequest request,
+            @AuthenticationPrincipal UserDetails userDetails)
+    {
+        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        contentService.reviewContent(contentId,userId,
                 request.getStatus(),
                 request.getReviewNotes());
         return ResponseEntity.ok().build();

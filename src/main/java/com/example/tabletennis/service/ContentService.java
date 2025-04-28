@@ -49,7 +49,7 @@ public interface ContentService {
     Map<Integer, Float> getContentTagVector(Integer contentId);
 
     Page<Content> getContentsByStatus(String status, int page, int size);
-    void reviewContent(Integer contentId, String status, String reviewNotes);
+    void reviewContent(Integer contentId,Long userId, String status, String reviewNotes);
 
     Long getContentUserId(Integer contentId);
 

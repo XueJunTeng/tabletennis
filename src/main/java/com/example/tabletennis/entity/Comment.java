@@ -23,4 +23,5 @@ public class Comment {
     private LocalDateTime createTime;
     private String status = "APPROVED";
     private String username;
+    private String avatarUrl;   // 新增字段
 }

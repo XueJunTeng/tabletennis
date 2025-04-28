@@ -16,6 +16,7 @@ public class CommentDTO {
     private Long commentId;
     private String content;
     private String username;
+    private String avatarUrl;// 新增字段
     private LocalDateTime createTime;
     private List<CommentDTO> replies = new ArrayList<>();
 }

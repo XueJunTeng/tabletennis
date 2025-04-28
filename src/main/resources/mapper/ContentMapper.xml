@@ -23,6 +23,7 @@
         <result property="coverImageUrl" column="cover_image_url"/>
         <result property="filePath" column="file_path"/>
         <result property="author" column="author"/>
+        <result property="authorUrl" column="authorUrl"/>
         <result property="createdTime" column="created_time"/>
         <result property="description" column="description"/>
         <result property="userId" column="user_id"/>
@@ -136,6 +137,7 @@
             c.cover_image_url,
             c.file_path,
             u.username AS author,
+            u.avatar_url AS authorUrl,
             c.created_time,
             c.description,
             c.user_id,
@@ -388,6 +390,44 @@
             #{id}
         </foreach>
         AND c.type = #{type}
+    </select>
+
+    <!-- 新增基于标签的相关推荐查询 -->
+    <select id="selectVideosByTags" resultMap="ContentResultMap">
+        SELECT
+        c.content_id,
+        c.title,
+        c.view_count,
+        c.cover_image_url,
+        c.file_path,
+        u.username AS author,
+        c.created_time,
+        c.description,
+        c.user_id,
+        c.type,
+        c.status,
+        c.like_count,
+        c.comment_count,
+        c.favorite_count,
+        c.last_modified_time,
+        c.review_notes
+        FROM content c
+        LEFT JOIN user u ON c.user_id = u.user_id
+        INNER JOIN content_tag ct ON c.content_id = ct.content_id
+        WHERE ct.tag_id IN
+        <foreach item="tagId" collection="tagIds" open="(" separator="," close=")">
+            #{tagId}
+        </foreach>
+        AND c.content_id != #{excludeContentId}
+        AND c.status = 'APPROVED'
+        AND c.type = 'VIDEO'
+        GROUP BY c.content_id
+        HAVING COUNT(ct.tag_id) > 0
+        ORDER BY
+        COUNT(ct.tag_id) DESC,  -- 标签匹配度优先
+        (c.like_count*0.4 + c.view_count*0.3 + c.favorite_count*0.2 + c.comment_count*0.1) DESC, -- 综合热度
+        c.created_time DESC     -- 时效性排序
+        LIMIT #{limit}
     </select>
 
 </mapper>

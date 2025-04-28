@@ -39,6 +39,7 @@ public class Content {
 
     // 非持久化字段（用于业务展示）
     private String author;
+    private String authorUrl;
     private String reviewNotes; // 审核备注
     // 优化后的 toString（隐藏敏感字段）
     @Override

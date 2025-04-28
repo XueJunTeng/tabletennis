@@ -10,7 +10,11 @@ import java.util.Set;
 
 @Mapper
 public interface ContentMapper {
-
+    List<Content> selectVideosByTags(
+            @Param("tagIds") Set<Integer> tagIds,
+            @Param("excludeContentId") Integer excludeContentId,
+            @Param("limit") int limit
+    );
     //插入新的内容（视频/文章）
     int insertContent(Content content);
 

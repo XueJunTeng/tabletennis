@@ -19,28 +19,27 @@ public class TagService {
         return tagMapper.selectTags("%" + search + "%", pageSize);
     }
 
-    @Transactional(readOnly = true)
-    public List<Tag> getHotTags(int limit) {
-        return tagMapper.selectHotTags(limit);
-    }
-
     @Transactional
-    public Tag createTag(Tag tag) {
-        tagMapper.insertTag(tag);
+    public Tag createTag(String tagName, Integer weight) {
+        Tag tag = new Tag();
+        tag.setTagName(tagName);
+        tag.setWeight(Float.valueOf(weight));// 保存到数据库的实现
+        tagMapper.insert(tag);
         return tag;
     }
 
+    public Tag updateTagWeight(Integer tagId, Integer newWeight) {
+        Tag tag = tagMapper.selectById(tagId);
+        if (tag != null) {
+            tag.setWeight(Float.valueOf(newWeight));
+            tagMapper.updateById(tag);
+        }
+        return tag;
+    }
     public PageInfo<Tag> getTags(int page, int pageSize, String keyword) {
         PageHelper.startPage(page, pageSize);
         List<Tag> tags = tagMapper.selectByKeyword(keyword);
         return new PageInfo<>(tags);
-    }
-
-    public Tag createTag(String tagName) {
-        Tag tag = new Tag();
-        tag.setTagName(tagName);
-        tagMapper.insert(tag);
-        return tag;
     }
 
     public void deleteTag(Integer tagId) {

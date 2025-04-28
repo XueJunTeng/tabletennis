@@ -2,10 +2,10 @@ package com.example.tabletennis.service;
 
 import com.example.tabletennis.dto.CommentDTO;
 import com.example.tabletennis.entity.Comment;
+import com.example.tabletennis.entity.User;
 import com.example.tabletennis.mapper.CommentMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -49,6 +49,7 @@ public class CommentService {
                 comment.getCommentId(),
                 comment.getContent(),
                 comment.getUsername(),
+                comment.getAvatarUrl(), // 新增参数
                 comment.getCreateTime(),
                 new ArrayList<>()
         );
@@ -62,12 +63,14 @@ public class CommentService {
         comment.setParentId(parentId);
         comment.setCreateTime(LocalDateTime.now());
         commentMapper.insert(comment);
-        String username = userService.getUsernameById(userId);
+        User user = userService.getUserById(userId);
+
         notificationService.createCommentNotification(comment);
         return new CommentDTO(
                 comment.getCommentId(),
                 content,
-                username,
+                user.getUsername(),
+                user.getAvatarUrl(), // 新增头像参数
                 comment.getCreateTime(),
                 new ArrayList<>()
         );

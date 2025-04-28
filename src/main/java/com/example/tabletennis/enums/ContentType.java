@@ -6,8 +6,8 @@ package com.example.tabletennis.enums;
  */
 public enum ContentType {
     VIDEO("VIDEO"),      // 视频
-    ARTICLE("ARTICLE"),  // 文章
-    POST("POST");
+    ARTICLE("ARTICLE");  // 文章
+    
     private final String dbValue;
 
     ContentType(String dbValue) {

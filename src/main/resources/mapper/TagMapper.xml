@@ -15,6 +15,7 @@
     <select id="selectTags" resultMap="TagResultMap">
         SELECT * FROM tag
         WHERE tag_name LIKE CONCAT('%', #{search}, '%')
+        ORDER BY usage_count DESC <!-- 新增排序 -->
         LIMIT #{pageSize}
     </select>
 
@@ -45,6 +46,7 @@
         <if test="keyword != null and keyword != ''">
             WHERE tag_name LIKE CONCAT('%', #{keyword}, '%')
         </if>
+        ORDER BY weight DESC  <!-- 新增排序 -->
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="tagId">
@@ -63,4 +65,9 @@
         </foreach>
     </delete>
 
+    <update id="updateById">
+        UPDATE tag
+        SET weight = #{weight}
+        WHERE tag_id = #{tagId}
+    </update>
 </mapper>

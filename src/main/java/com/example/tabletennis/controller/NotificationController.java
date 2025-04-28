@@ -58,6 +58,7 @@ public class NotificationController {
         Map<String, Integer> counts = new HashMap<>();
         counts.put("replyComment", notificationService.countUnreadReplyComment(userId));
         counts.put("like", notificationService.countUnreadLike(userId));
+        counts.put("system", notificationService.countUnreadSystem(userId));
 
         return ResponseEntity.ok(ApiResponse.success("Success", counts));
     }
