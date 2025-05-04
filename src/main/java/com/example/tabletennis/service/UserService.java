@@ -1,15 +1,18 @@
 package com.example.tabletennis.service;
 
-import com.example.tabletennis.dto.BatchOperationDTO;
-import com.example.tabletennis.dto.PageRequestDTO;
-import com.example.tabletennis.dto.PageResponseDTO;
+import com.example.tabletennis.dto.*;
 import com.example.tabletennis.entity.User;
+import com.example.tabletennis.enums.Role;
+import com.example.tabletennis.exception.BusinessException;
 import com.example.tabletennis.exception.ResourceNotFoundException;
 import com.example.tabletennis.mapper.UserMapper;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -19,6 +22,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class UserService {
     private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
 
     public PageResponseDTO<User> getUsersByPage(PageRequestDTO request) {
         Map<String, Object> params = buildConditionParams(request);
@@ -110,4 +114,31 @@ public class UserService {
     }
 
 
+    // 创建用户
+    @Transactional
+    public User createUser(UserCreateDTO createDTO) {
+        // 检查邮箱是否已存在
+        if (userMapper.selectByEmail(createDTO.getEmail()) != null) {
+            throw new RuntimeException("邮箱已被注册");
+        }
+        // 检查用户名是否存在
+        if (userMapper.selectByUsername(createDTO.getUsername())!= null) {
+            throw new RuntimeException("用户名已存在");
+        }
+
+        // 构建用户对象
+        User user = new User();
+        user.setUsername(createDTO.getUsername());
+        user.setEmail(createDTO.getEmail());
+        user.setPassword(passwordEncoder.encode(createDTO.getPassword()));
+        user.setRegistrationTime(LocalDateTime.now());
+        user.setRole(createDTO.getRole()); // 添加默认角色
+        user.setAvatarUrl("http://localhost:8080/uploads/avatars/default-avatar.png"); // 添加默认头像
+
+        // 插入数据库
+        userMapper.insertUser(user);
+
+        // 返回完整用户对象
+        return userMapper.selectByUsername(user.getUsername());
+    }
 }

@@ -56,7 +56,6 @@
             ct.content_id = #{contentId}
     </select>
 
-    <!-- 所有涉及标签的查询均移除JOIN操作 -->
     <select id="selectByTitle" resultMap="ContentResultMap">
         SELECT
             c.content_id,
@@ -77,8 +76,15 @@
             c.review_notes
         FROM content c
                  LEFT JOIN user u ON c.user_id = u.user_id
-        WHERE c.title LIKE CONCAT('%', #{title}, '%')
-        ORDER BY c.created_time DESC
+                 LEFT JOIN content_tag ct ON c.content_id = ct.content_id
+                 LEFT JOIN tag t ON ct.tag_id = t.tag_id
+        WHERE
+            c.title LIKE CONCAT('%', #{title}, '%')
+           OR t.tag_name LIKE CONCAT('%', #{title}, '%')
+        GROUP BY c.content_id
+        ORDER BY
+            MAX(CASE WHEN c.title LIKE CONCAT('%', #{title}, '%') THEN 0 ELSE 1 END),
+            MAX(c.created_time) DESC
     </select>
 
     <select id="selectApprovedVideos" resultMap="ContentResultMap">
@@ -200,6 +206,38 @@
         FROM content c
         LEFT JOIN user u ON c.user_id = u.user_id
         WHERE c.status = 'PENDING'
+        <if test="keyword != null and keyword != ''">
+            AND (c.title LIKE CONCAT('%', #{keyword}, '%')
+            OR u.username LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="type != null and type != ''">
+            AND c.type = #{type}
+        </if>
+        ORDER BY c.created_time DESC
+    </select>
+
+
+    <select id="selectContents" resultMap="ContentResultMap">
+        SELECT
+        c.content_id,
+        c.title,
+        c.view_count,
+        c.cover_image_url,
+        c.file_path,
+        u.username AS author,
+        c.created_time,
+        c.description,
+        c.user_id,
+        c.type,
+        c.status,
+        c.like_count,
+        c.comment_count,
+        c.favorite_count,
+        c.last_modified_time,
+        c.review_notes
+        FROM content c
+        LEFT JOIN user u ON c.user_id = u.user_id
+        WHERE 1=1
         <if test="keyword != null and keyword != ''">
             AND (c.title LIKE CONCAT('%', #{keyword}, '%')
             OR u.username LIKE CONCAT('%', #{keyword}, '%'))
@@ -429,5 +467,14 @@
         c.created_time DESC     -- 时效性排序
         LIMIT #{limit}
     </select>
+    <delete id="deleteById">
+        DELETE FROM content WHERE content_id = #{contentId}
+    </delete>
 
+    <delete id="deleteBatchIds">
+        DELETE FROM content WHERE content_id IN
+        <foreach collection="contentIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
 </mapper>

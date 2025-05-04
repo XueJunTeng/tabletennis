@@ -4,9 +4,11 @@ import com.alibaba.excel.EasyExcel;
 import com.example.tabletennis.dto.BatchOperationDTO;
 import com.example.tabletennis.dto.PageRequestDTO;
 import com.example.tabletennis.dto.PageResponseDTO;
+import com.example.tabletennis.dto.UserCreateDTO;
 import com.example.tabletennis.entity.User;
 import com.example.tabletennis.service.UserService;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -42,6 +44,11 @@ public class UserController {
         return ResponseEntity.ok().build();
     }
 
+    // 创建用户
+    @PostMapping
+    public ResponseEntity<User> createUser(@RequestBody UserCreateDTO createDTO) {
+        return ResponseEntity.ok(userService.createUser(createDTO));
+    }
     // 批量操作
     @PostMapping("/batch-operations")
     public ResponseEntity<?> batchOperation(@RequestBody BatchOperationDTO dto) {

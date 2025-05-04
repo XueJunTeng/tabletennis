@@ -44,6 +44,13 @@ public class ContentServiceImpl implements ContentService {
     private final UserBehaviorMapper userBehaviorMapper;
     private final NotificationService notificationService;
 
+    public void deleteContent(Integer contentId) {
+        contentMapper.deleteById(contentId);
+    }
+
+    public void batchDeleteContents(List<Integer> contentIds) {
+        contentMapper.deleteBatchIds(contentIds);
+    }
     @Override
     public List<Content> getSearchContents(String query){
         return contentMapper.selectByTitle(query);
@@ -52,6 +59,14 @@ public class ContentServiceImpl implements ContentService {
     public List<Content> getPendingContents(int page, int size, String keyword, String type) {
         PageHelper.startPage(page, size);
         return contentMapper.selectPendingContents(
+                processSearchKeyword(keyword),
+                validateContentType(type)
+        );
+    }
+    @Override
+    public List<Content> getContents(int page, int size, String keyword, String type) {
+        PageHelper.startPage(page, size);
+        return contentMapper.selectContents(
                 processSearchKeyword(keyword),
                 validateContentType(type)
         );

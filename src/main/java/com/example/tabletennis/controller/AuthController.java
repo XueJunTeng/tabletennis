@@ -4,6 +4,7 @@ package com.example.tabletennis.controller;
 import com.example.tabletennis.dto.*;
 import com.example.tabletennis.entity.User;
 import com.example.tabletennis.service.AuthService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,14 +21,14 @@ public class AuthController {
 
     // 用户注册
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@RequestBody AuthRequest request) {
+    public ResponseEntity<AuthResponse> register(@Valid  @RequestBody RegisterRequest request) {
         User user = authService.register(request);
         return buildAuthResponse(user);
     }
 
     // 用户登录
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request) {
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest request) {
         User user = authService.login(request);
         return buildAuthResponse(user);
     }
@@ -36,7 +37,7 @@ public class AuthController {
     @PostMapping("/profile")
     public ResponseEntity<AuthResponse> updateProfile(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestBody ProfileUpdateRequest request) {
+            @Valid @RequestBody ProfileUpdateRequest request) {
         Long userId = authService.getUserIdByUsername(userDetails.getUsername());
         User updatedUser = authService.updateUserProfile(userId, request);
         return buildAuthResponse(updatedUser);
@@ -46,7 +47,7 @@ public class AuthController {
     @PostMapping("/change-password")
     public ResponseEntity<ApiResponse> changePassword(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestBody PasswordChangeRequest request) {
+            @Valid @RequestBody PasswordChangeRequest request) {
         Long userId = authService.getUserIdByUsername(userDetails.getUsername());
         authService.changePassword(userId, request);
         return ResponseEntity.ok(ApiResponse.success("密码修改成功"));

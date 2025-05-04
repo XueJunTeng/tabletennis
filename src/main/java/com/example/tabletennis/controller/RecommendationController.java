@@ -34,24 +34,17 @@ public class RecommendationController {
     private final RecommendationService recommendationService;
     private final AuthService authService;
 
-    //计算所有用户的喜好，录入推荐缓存表
-    @GetMapping
-    public List<Content> getRecommendations(@AuthenticationPrincipal User user) {
-        List<Recommendation> recs = recommendationMapper.selectByUser(user.getUserId());
-        return recs.stream()
-                .map(rec -> contentService.getVideoById(rec.getContentId()))
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
-    }
-
     //实时推荐
+    // 实时推荐接口添加过滤开关参数
     @GetMapping("/real-time")
     public List<Recommendation> getRealTimeRecommendations(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam(defaultValue = "5000") int limit) {
+            @RequestParam(defaultValue = "500") int limit,
+            @RequestParam(defaultValue = "true") boolean filterViewed) { // 新增过滤开关
+
         Long userId = authService.getUserIdByUsername(userDetails.getUsername());
 
-        // 0. 获取用户近期观看记录（新增步骤）
+        // 0. 获取用户近期观看记录
         Set<Integer> viewedIds = getRecentViewedContents(userId);
 
         // 1. 生成两种推荐结果
@@ -63,8 +56,10 @@ public class RecommendationController {
         contentBased.forEach(r -> combinedScores.merge(r.getContentId(), r.getRecommendScore() * 0.6f, Float::sum));
         collabBased.forEach(r -> combinedScores.merge(r.getContentId(), r.getRecommendScore() * 0.4f, Float::sum));
 
-        // 3. 过滤已观看内容（新增过滤逻辑）
-        combinedScores.keySet().removeAll(viewedIds);
+        // 3. 根据开关过滤已观看内容（调用独立方法）
+        if (filterViewed) {
+            filterViewedContents(combinedScores, viewedIds);
+        }
 
         // 4. 提取需要元数据的contentIds
         List<Integer> contentIds = new ArrayList<>(combinedScores.keySet());
@@ -88,6 +83,12 @@ public class RecommendationController {
                 .limit(limit)
                 .map(entry -> createRecommendation(userId, entry, contentMap.get(entry.getKey())))
                 .collect(Collectors.toList());
+    }
+    // 独立过滤方法（新增）
+    private void filterViewedContents(
+            Map<Integer, Float> candidateScores,
+            Set<Integer> viewedIds) {
+        candidateScores.keySet().removeAll(viewedIds);
     }
     @GetMapping("/related/{contentId}")
     public List<Content> getRelatedVideos(

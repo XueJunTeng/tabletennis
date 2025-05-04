@@ -10,6 +10,8 @@ import java.util.Set;
 
 @Mapper
 public interface ContentMapper {
+    int deleteById(Integer contentId);
+    int deleteBatchIds(@Param("contentIds") List<Integer> contentIds);
     List<Content> selectVideosByTags(
             @Param("tagIds") Set<Integer> tagIds,
             @Param("excludeContentId") Integer excludeContentId,
@@ -72,6 +74,10 @@ public interface ContentMapper {
     // 添加批量查询方法
     List<Content> selectBatchIds(@Param("contentIds") List<Integer> contentIds);
     List<Content> selectPendingContents(
+            @Param("keyword") String keyword,
+            @Param("type") String type
+    );
+    List<Content> selectContents(
             @Param("keyword") String keyword,
             @Param("type") String type
     );

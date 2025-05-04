@@ -60,4 +60,8 @@ public interface ContentService {
     List<Content> getSearchContents(String query);
 
     List<Content> getPendingContents(int page, int size, String keyword, String type);
+    List<Content> getContents(int page, int size, String keyword, String type);
+     void deleteContent(Integer contentId) ;
+
+     void batchDeleteContents(List<Integer> contentIds);
 }

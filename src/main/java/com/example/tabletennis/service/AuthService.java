@@ -2,6 +2,7 @@ package com.example.tabletennis.service;
 
 import com.example.tabletennis.dto.PasswordChangeRequest;
 import com.example.tabletennis.dto.ProfileUpdateRequest;
+import com.example.tabletennis.dto.RegisterRequest;
 import com.example.tabletennis.entity.User;
 import com.example.tabletennis.dto.AuthRequest;
 import com.example.tabletennis.enums.Role;
@@ -37,7 +38,7 @@ public class AuthService {
     private final JwtUtils jwtUtils;
 
     // 修改注册方法返回User对象
-    public User register(AuthRequest request) {
+    public User register(RegisterRequest request) {
         // 检查邮箱是否已存在
         if (userMapper.selectByEmail(request.getEmail()) != null) {
             throw new RuntimeException("邮箱已被注册");
@@ -65,18 +66,34 @@ public class AuthService {
 
     // 登录方法返回User对象
     public User login(AuthRequest request) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getUsername(),
-                        request.getPassword()
-                )
-        );
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getUsername(),
+                            request.getPassword()
+                    )
+            );
 
-        User user = (User) authentication.getPrincipal();
-        userMapper.updateLastLoginTime(user.getUserId(), LocalDateTime.now());
+            User user = (User) authentication.getPrincipal();
+            // 直接判断状态字段（假设字段名为status，禁用状态值为"disabled"）
+            if ("disabled".equals(user.getStatus())) {
+                throw new RuntimeException("账号已封禁");
+            }
+            userMapper.updateLastLoginTime(user.getUserId(), LocalDateTime.now());
 
-        // 获取完整用户信息
-        return userMapper.selectByUsername(user.getUsername());
+            // 获取完整用户信息
+            return userMapper.selectByUsername(user.getUsername());
+
+        } catch (BadCredentialsException ex) {
+            // 统一认证失败提示（避免信息泄露）
+            throw new RuntimeException("用户名或密码错误");
+        } catch (UsernameNotFoundException ex) {
+            // 用户不存在提示（如果允许显示）
+            throw new RuntimeException("用户不存在");
+        } catch (Exception ex) {
+            // 其他异常处理
+            throw new RuntimeException(ex.getMessage());
+        }
     }
 
     // 新增Token生成方法
